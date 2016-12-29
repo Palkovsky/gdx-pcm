@@ -1,28 +1,31 @@
-package pl.dawidmacek.pcmgdx.decoders;
+package pl.dawidmacek.gdxpcm.decoders;
 
 import java.io.InputStream;
 
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.utils.StreamUtils;
+
 import javazoom.jl.decoder.Bitstream;
 import javazoom.jl.decoder.BitstreamException;
 import javazoom.jl.decoder.Decoder;
 import javazoom.jl.decoder.DecoderException;
 import javazoom.jl.decoder.Header;
 import javazoom.jl.decoder.SampleBuffer;
-import pl.dawidmacek.pcmgdx.helpers.SampleFrame;
+import pl.dawidmacek.gdxpcm.helpers.SampleFrame;
 
 
 public class Mpeg3Decoder extends AudioDecoder {
 
     private Bitstream bitstream;
     private Decoder decoder;
+    private InputStream inputStream;
 
     private int frequency, chanel, bufferSize;
 
     public Mpeg3Decoder(FileHandle file) {
         super(file);
 
-        InputStream inputStream = file.read();
+        inputStream = file.read();
 
         bitstream = new Bitstream(inputStream);
         decoder = new Decoder();
@@ -34,8 +37,7 @@ public class Mpeg3Decoder extends AudioDecoder {
                 chanel = decoder.getOutputChannels();
                 bufferSize = decoder.getOutputBlockSize();
 
-                bitstream = new Bitstream(inputStream);
-                decoder = new Decoder();
+                reset();
             }
         } catch (BitstreamException e) {
             e.printStackTrace();
@@ -49,22 +51,26 @@ public class Mpeg3Decoder extends AudioDecoder {
     public SampleFrame readNextFrame() {
         try {
             int totalLength = 0;
-            Header frameHeader = bitstream.readFrame();
 
-            if (decoder == null || bitstream == null || frameHeader == null)
+            if (decoder == null || bitstream == null)
                 return null;
+
+            Header frameHeader = bitstream.readFrame();
 
             SampleBuffer sampleBuffer = null;
             try {
                 sampleBuffer = ((SampleBuffer) decoder.decodeFrame(frameHeader, bitstream));
-            } catch (ArrayIndexOutOfBoundsException e) {
-                e.printStackTrace();
+            } catch (Exception e) {
+                return null;
             }
             if (sampleBuffer == null)
                 return null;
 
-            short[] samples = sampleBuffer.getBuffer();
+            if (bitstream == null)
+                return null;
             bitstream.closeFrame();
+
+            short[] samples = sampleBuffer.getBuffer();
             totalLength += sampleBuffer.getBufferLength();
 
             renderedSeconds += secondsPerBuffer;
@@ -72,8 +78,6 @@ public class Mpeg3Decoder extends AudioDecoder {
             return new SampleFrame(samples, totalLength, !isBigEndian());
 
         } catch (BitstreamException e) {
-            e.printStackTrace();
-        } catch (DecoderException e) {
             e.printStackTrace();
         }
         return null;
@@ -106,6 +110,18 @@ public class Mpeg3Decoder extends AudioDecoder {
         super.reset();
         bitstream = new Bitstream(file.read());
         decoder = new Decoder();
+    }
+
+    @Override
+    public void dispose() {
+        try {
+            bitstream.close();
+        } catch (BitstreamException e) {
+        }
+        StreamUtils.closeQuietly(inputStream);
+        bitstream = null;
+        decoder = null;
+
     }
 
 }

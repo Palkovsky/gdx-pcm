@@ -1,4 +1,4 @@
-package pl.dawidmacek.pcmgdx.helpers;
+package pl.dawidmacek.gdxpcm.helpers;
 
 public class SampleFrame {
 

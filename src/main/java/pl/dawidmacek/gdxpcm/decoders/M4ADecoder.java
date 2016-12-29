@@ -1,4 +1,4 @@
-package pl.dawidmacek.pcmgdx.decoders;
+package pl.dawidmacek.gdxpcm.decoders;
 
 import com.badlogic.gdx.files.FileHandle;
 import net.sourceforge.jaad.aac.AACException;
@@ -8,12 +8,14 @@ import net.sourceforge.jaad.mp4.MP4Container;
 import net.sourceforge.jaad.mp4.api.AudioTrack;
 import net.sourceforge.jaad.mp4.api.Frame;
 import net.sourceforge.jaad.mp4.api.Track;
-import pl.dawidmacek.pcmgdx.helpers.BytesUtils;
-import pl.dawidmacek.pcmgdx.helpers.SampleFrame;
+import pl.dawidmacek.gdxpcm.helpers.BytesUtils;
+import pl.dawidmacek.gdxpcm.helpers.SampleFrame;
+
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.List;
+
 
 public class M4ADecoder extends AudioDecoder {
 
@@ -57,6 +59,9 @@ public class M4ADecoder extends AudioDecoder {
     public SampleFrame readNextFrame() {
 
         try {
+
+            if (decoder == null || track == null || sampleBuffer == null)
+                return null;
 
             Frame nextFrame = track.readNextFrame();
 
@@ -105,12 +110,17 @@ public class M4ADecoder extends AudioDecoder {
         try {
             MP4Container mp4Container = new MP4Container(file.read());
             track = mp4Container.getMovie().getTracks().get(0);
-            sampleBuffer = new SampleBuffer();
-            sampleBuffer.setBigEndian(true);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+    }
+
+    @Override
+    public void dispose() {
+        track = null;
+        decoder = null;
+        sampleBuffer = null;
     }
 }
 

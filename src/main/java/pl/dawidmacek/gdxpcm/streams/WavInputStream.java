@@ -1,4 +1,4 @@
-package pl.dawidmacek.pcmgdx.streams;
+package pl.dawidmacek.gdxpcm.streams;
 
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.GdxRuntimeException;

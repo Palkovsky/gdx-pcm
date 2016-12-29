@@ -1,13 +1,12 @@
-package pl.dawidmacek.pcmgdx.decoders;
+package pl.dawidmacek.gdxpcm.decoders;
 
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.StreamUtils;
+import pl.dawidmacek.gdxpcm.helpers.BytesUtils;
+import pl.dawidmacek.gdxpcm.helpers.SampleFrame;
+import pl.dawidmacek.gdxpcm.streams.WavInputStream;
 
 import java.io.IOException;
-
-import pl.dawidmacek.pcmgdx.helpers.BytesUtils;
-import pl.dawidmacek.pcmgdx.helpers.SampleFrame;
-import pl.dawidmacek.pcmgdx.streams.WavInputStream;
 
 
 public class WAVDecoder extends AudioDecoder {
@@ -62,5 +61,10 @@ public class WAVDecoder extends AudioDecoder {
             StreamUtils.closeQuietly(inputStream);
         }
         inputStream = new WavInputStream(file);
+    }
+
+    @Override
+    public void dispose() {
+        StreamUtils.closeQuietly(inputStream);
     }
 }

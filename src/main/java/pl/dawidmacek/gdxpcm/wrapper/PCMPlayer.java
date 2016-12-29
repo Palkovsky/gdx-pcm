@@ -1,4 +1,4 @@
-package pl.dawidmacek.pcmgdx.wrapper;
+package pl.dawidmacek.gdxpcm.wrapper;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.AudioDevice;
@@ -6,14 +6,15 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 
 import net.sourceforge.jaad.aac.AACException;
-import pl.dawidmacek.pcmgdx.decoders.*;
-import pl.dawidmacek.pcmgdx.helpers.SampleFrame;
+import pl.dawidmacek.gdxpcm.decoders.*;
+import pl.dawidmacek.gdxpcm.helpers.SampleFrame;
+
 
 public class PCMPlayer {
 
     public enum PlayerState {PLAYING, PAUSED, FINISHED, SEEKING, DISPOSED}
 
-    public enum FileType {MP3, FLAC, WAV, OGG, AIFF, M4A, AAC}
+    public enum FileType {MP3, FLAC, WAV, OGG, M4A, AAC}
 
     private AudioDecoder decoder;
     private AudioDevice device;
@@ -53,88 +54,60 @@ public class PCMPlayer {
             @Override
             public void run() {
 
-                // System.out.println(decoder.getFrequency() + " Hz, " + decoder.getSampleSize() + " bits, " + decoder.getChannels() + " channels");
-
                 while (!Thread.currentThread().isInterrupted()) {
 
-                    //System.out.println(decoder.getPosition());
-                    //System.out.println(state);
+                    if (decoder != null) {
 
-                    if (shouldReset) {
-                        decoder.reset();
-                        shouldReset = false;
-                    }
+                        if (shouldReset) {
+                            decoder.reset();
+                            shouldReset = false;
+                        }
 
-                    if (state == PlayerState.SEEKING) {
+                        if (state == PlayerState.SEEKING) {
 
-                        decoder.setPosition(seekTarget);
-                        seekTarget = 0;
-                        setState(preSeekState);
-                        preSeekState = null;
+                            decoder.setPosition(seekTarget);
+                            seekTarget = 0;
+                            setState(preSeekState);
+                            preSeekState = null;
 
-                    } else if (state == PlayerState.PLAYING) {
+                        } else if (state == PlayerState.PLAYING) {
 
-                        SampleFrame frame = decoder.nextFrame();
+                            SampleFrame frame = decoder.nextFrame();
 
-                        if (frame == null) {
-                            setState(PlayerState.FINISHED);
-                        } else {
-                            if (frameListener != null)
-                                frameListener.onNewFrame(frame);
-                            if (!PCMPlayer.this.quietMode) {
-                                try {
-                                    device.writeSamples(frame.getData(), 0, frame.getLength());
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                    break;
+                            if (frame == null) {
+                                setState(PlayerState.FINISHED);
+                            } else {
+                                if (frameListener != null)
+                                    frameListener.onNewFrame(frame);
+                                if (!PCMPlayer.this.quietMode) {
+                                    try {
+                                        device.writeSamples(frame.getData(), 0, frame.getLength());
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                        break;
+                                    }
                                 }
                             }
                         }
-
                     }
 
                 }
             }
         });
-
-        /*
-        Gdx.app.addLifecycleListener(new LifecycleListener() {
-            @Override
-            public void pause() {
-                PCMPlayer.this.pause();
-            }
-
-            @Override
-            public void resume() {
-                if (seekTarget != 0)
-                    setState(PlayerState.SEEKING);
-                else if (state == PlayerState.PAUSED) {
-                    PCMPlayer.this.unpause();
-                }
-
-            }
-
-            @Override
-            public void dispose() {
-                PCMPlayer.this.dispose();
-            }
-        });
-        */
-
         playbackThread.start();
     }
 
 
     public void dispose() {
-        if (!playbackThread.isInterrupted())
-            playbackThread.interrupt();
-        if (device != null) {
+        playbackThread.interrupt();
+        if (device != null)
             device.dispose();
-        }
-        playbackThread = null;
-        decoder = null;
-        frameListener = null;
+        if (decoder != null)
+            decoder.dispose();
         stateListener = null;
+        frameListener = null;
+        decoder = null;
+        device = null;
         setState(PlayerState.DISPOSED);
     }
 
@@ -162,7 +135,6 @@ public class PCMPlayer {
         preSeekState = state;
         setState(PlayerState.SEEKING);
         seekTarget = seconds;
-        while(seekTarget != 0){};
     }
 
     public void reset() {
@@ -184,7 +156,7 @@ public class PCMPlayer {
         if (state != PlayerState.PLAYING && state != PlayerState.SEEKING) {
             setState(PlayerState.PLAYING);
         }
-        if(state == PlayerState.SEEKING)
+        if (state == PlayerState.SEEKING)
             preSeekState = PlayerState.PLAYING;
     }
 
@@ -220,15 +192,13 @@ public class PCMPlayer {
             case M4A:
                 try {
                     return new M4ADecoder(file);
-                } catch (AACException e) {
+                } catch (Exception e) {
                     throw new GdxRuntimeException("Incompatible m4a file.");
                 }
             case AAC:
                 return new AACDecoder(file);
             case WAV:
                 return new WAVDecoder(file);
-            case AIFF:
-                return new AACDecoder(file);
         }
 
         throw new GdxRuntimeException("Incompatible audio file.");
@@ -247,8 +217,6 @@ public class PCMPlayer {
             return FileType.AAC;
         if (ext.equals("wav"))
             return FileType.WAV;
-        if (ext.equals("aiff"))
-            return FileType.AIFF;
         return null;
     }
 
@@ -259,4 +227,5 @@ public class PCMPlayer {
     public interface PCMPlayerFrameListener {
         void onNewFrame(SampleFrame frame);
     }
+
 }

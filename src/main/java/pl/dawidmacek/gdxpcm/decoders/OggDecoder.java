@@ -1,9 +1,9 @@
-package pl.dawidmacek.pcmgdx.decoders;
+package pl.dawidmacek.gdxpcm.decoders;
 
 import com.badlogic.gdx.files.FileHandle;
-import pl.dawidmacek.pcmgdx.helpers.BytesUtils;
-import pl.dawidmacek.pcmgdx.helpers.SampleFrame;
-import pl.dawidmacek.pcmgdx.streams.OggInputStream;
+import pl.dawidmacek.gdxpcm.helpers.BytesUtils;
+import pl.dawidmacek.gdxpcm.helpers.SampleFrame;
+import pl.dawidmacek.gdxpcm.streams.OggInputStream;
 
 
 public class OggDecoder extends AudioDecoder {
@@ -27,7 +27,6 @@ public class OggDecoder extends AudioDecoder {
         short[] shortSamples = BytesUtils.bytesToShorts(buffer, !isBigEndian());
 
         renderedSeconds += secondsPerBuffer;
-
 
         return new SampleFrame(shortSamples, getBufferSize() / 2, !isBigEndian());
     }
@@ -58,5 +57,11 @@ public class OggDecoder extends AudioDecoder {
         if (input != null)
             input.close();
         input = new OggInputStream(file.read());
+    }
+
+    @Override
+    public void dispose() {
+        input.close();
+        input = null;
     }
 }

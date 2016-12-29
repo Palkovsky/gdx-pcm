@@ -1,4 +1,4 @@
-package pl.dawidmacek.pcmgdx.streams;
+package pl.dawidmacek.gdxpcm.streams;
 /*
  * Copyright (c) 2007, Slick 2D
  *
@@ -186,7 +186,7 @@ public class OggInputStream extends InputStream {
     }
 
     /**
-     * Initialise the pl.dawidmacek.pcmgdx.streams and thread involved in the streaming of OGG data
+     * Initialise the pl.dawidmacek.gdxpcm.streams and thread involved in the streaming of OGG data
      */
     private void init() {
         initVorbis();

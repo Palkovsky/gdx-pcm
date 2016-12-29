@@ -1,7 +1,7 @@
-package pl.dawidmacek.pcmgdx.decoders;
+package pl.dawidmacek.gdxpcm.decoders;
 
 import com.badlogic.gdx.files.FileHandle;
-import pl.dawidmacek.pcmgdx.helpers.SampleFrame;
+import pl.dawidmacek.gdxpcm.helpers.SampleFrame;
 
 
 public abstract class AudioDecoder {
@@ -102,4 +102,6 @@ public abstract class AudioDecoder {
     public void setLooping(boolean looping) {
         this.looping = looping;
     }
+
+    public abstract void dispose();
 }

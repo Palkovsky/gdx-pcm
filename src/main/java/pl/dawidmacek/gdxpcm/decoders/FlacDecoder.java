@@ -1,22 +1,28 @@
-package pl.dawidmacek.pcmgdx.decoders;
+package pl.dawidmacek.gdxpcm.decoders;
 
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.utils.StreamUtils;
 import org.kc7bfi.jflac.FLACDecoder;
 import org.kc7bfi.jflac.frame.Frame;
 import org.kc7bfi.jflac.util.ByteData;
-import pl.dawidmacek.pcmgdx.helpers.BytesUtils;
-import pl.dawidmacek.pcmgdx.helpers.SampleFrame;
+import pl.dawidmacek.gdxpcm.helpers.BytesUtils;
+import pl.dawidmacek.gdxpcm.helpers.SampleFrame;
 
 import java.io.IOException;
+import java.io.InputStream;
+
+
 
 public class FlacDecoder extends AudioDecoder {
 
     private FLACDecoder decoder;
     private int bufferSize;
+    private InputStream inputStream;
 
     public FlacDecoder(FileHandle file) {
         super(file);
-        decoder = new FLACDecoder(file.read());
+        inputStream = file.read();
+        decoder = new FLACDecoder(inputStream);
         try {
             decoder.readMetadata();
             Frame frame = decoder.readNextFrame();
@@ -33,7 +39,6 @@ public class FlacDecoder extends AudioDecoder {
 
     @Override
     public SampleFrame readNextFrame() {
-
 
         Frame frame = null;
         try {
@@ -86,6 +91,12 @@ public class FlacDecoder extends AudioDecoder {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void dispose() {
+        decoder = null;
+        StreamUtils.closeQuietly(inputStream);
     }
 
 }
