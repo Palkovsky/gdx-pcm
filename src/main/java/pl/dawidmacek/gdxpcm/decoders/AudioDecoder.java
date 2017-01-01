@@ -44,6 +44,9 @@ public abstract class AudioDecoder {
         return this.currentFrame;
     }
 
+    //Returns true if frame was skipped. If it's not accessible - false.
+    public abstract boolean skipFrame();
+
     public abstract int getFrequency();
 
     public abstract int getChannels();
@@ -79,13 +82,13 @@ public abstract class AudioDecoder {
      * Sets current stream position.
      */
     public void setPosition(float position) {
-        this.seeking = true;
         if (position <= renderedSeconds) {
             reset();
         }
 
+        this.seeking = true;
         while (renderedSeconds < (position - secondsPerBuffer)) {
-            if (readNextFrame() == null) { //seeked to value grater than audio duration
+            if (!skipFrame()) { //seeked to value grater than audio duration
                 break;
             }
         }

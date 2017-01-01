@@ -5,12 +5,8 @@ import java.io.InputStream;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.StreamUtils;
 
-import javazoom.jl.decoder.Bitstream;
-import javazoom.jl.decoder.BitstreamException;
-import javazoom.jl.decoder.Decoder;
-import javazoom.jl.decoder.DecoderException;
-import javazoom.jl.decoder.Header;
-import javazoom.jl.decoder.SampleBuffer;
+import javazoom.jl.decoder.*;
+import pl.dawidmacek.gdxpcm.helpers.BytesUtils;
 import pl.dawidmacek.gdxpcm.helpers.SampleFrame;
 
 
@@ -20,7 +16,7 @@ public class Mpeg3Decoder extends AudioDecoder {
     private Decoder decoder;
     private InputStream inputStream;
 
-    private int frequency, chanel, bufferSize;
+    private int frequency, chanel, buffSize;
 
     public Mpeg3Decoder(FileHandle file) {
         super(file);
@@ -35,7 +31,7 @@ public class Mpeg3Decoder extends AudioDecoder {
                 decoder.decodeFrame(nextFrame, bitstream);
                 frequency = decoder.getOutputFrequency();
                 chanel = decoder.getOutputChannels();
-                bufferSize = decoder.getOutputBlockSize();
+                buffSize = decoder.getOutputBlockSize();
 
                 reset();
             }
@@ -50,37 +46,59 @@ public class Mpeg3Decoder extends AudioDecoder {
     @Override
     public SampleFrame readNextFrame() {
         try {
-            int totalLength = 0;
 
             if (decoder == null || bitstream == null)
                 return null;
 
-            Header frameHeader = bitstream.readFrame();
+            int totalLength = 0;
+            short[] outputSamples = new short[0];
+            int numFrames = getBufferSize() / buffSize;
 
-            SampleBuffer sampleBuffer = null;
-            try {
-                sampleBuffer = ((SampleBuffer) decoder.decodeFrame(frameHeader, bitstream));
-            } catch (Exception e) {
-                return null;
+            for (int i = 0; i < numFrames; i++) {
+                Header frameHeader = bitstream.readFrame();
+
+                SampleBuffer sampleBuffer;
+                try {
+                    sampleBuffer = ((SampleBuffer) decoder.decodeFrame(frameHeader, bitstream));
+                } catch (Exception e) {
+                    return null;
+                }
+                if (sampleBuffer == null)
+                    return null;
+
+                bitstream.closeFrame();
+
+                short[] samples = sampleBuffer.getBuffer().clone();
+                int length = sampleBuffer.getBufferLength();
+                totalLength += length;
+                outputSamples = BytesUtils.concat(outputSamples, samples);
             }
-            if (sampleBuffer == null)
-                return null;
-
-            if (bitstream == null)
-                return null;
-            bitstream.closeFrame();
-
-            short[] samples = sampleBuffer.getBuffer();
-            totalLength += sampleBuffer.getBufferLength();
 
             renderedSeconds += secondsPerBuffer;
 
-            return new SampleFrame(samples, totalLength, !isBigEndian());
+            return new SampleFrame(outputSamples.clone(), totalLength, !isBigEndian());
 
         } catch (BitstreamException e) {
             e.printStackTrace();
         }
         return null;
+    }
+
+    @Override
+    public boolean skipFrame() {
+        if (decoder == null || bitstream == null)
+            return false;
+
+        try {
+            if (bitstream.readFrame() == null)
+                return false;
+            bitstream.closeFrame();
+        } catch (BitstreamException e) {
+            return false;
+        }
+
+        renderedSeconds += secondsPerBuffer;
+        return true;
     }
 
     @Override
@@ -96,7 +114,7 @@ public class Mpeg3Decoder extends AudioDecoder {
 
     @Override
     protected int getBufferSize() {
-        return bufferSize * 2;
+        return buffSize;
     }
 
 
@@ -119,9 +137,6 @@ public class Mpeg3Decoder extends AudioDecoder {
         } catch (BitstreamException e) {
         }
         StreamUtils.closeQuietly(inputStream);
-        bitstream = null;
-        decoder = null;
-
     }
 
 }

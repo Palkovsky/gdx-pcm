@@ -11,21 +11,21 @@ import java.io.IOException;
 
 public class WAVDecoder extends AudioDecoder {
 
-    private WavInputStream inputStream;
+    private WavInputStream wavStream;
 
     public WAVDecoder(FileHandle file) {
         super(file);
-        inputStream = new WavInputStream(file);
+        wavStream = new WavInputStream(file);
         setup();
     }
 
     public SampleFrame readNextFrame() {
-        if (inputStream.getDataRemaining() <= 0)
+        if (wavStream.getDataRemaining() <= 0)
             return null;
 
         byte[] buffer = new byte[getBufferSize()];
         try {
-            inputStream.read(buffer);
+            wavStream.read(buffer);
             short[] shortSamples = BytesUtils.bytesToShorts(buffer, !isBigEndian());
             renderedSeconds += secondsPerBuffer;
             return new SampleFrame(shortSamples, getBufferSize() / 2, !isBigEndian());
@@ -35,18 +35,31 @@ public class WAVDecoder extends AudioDecoder {
         return null;
     }
 
+    @Override
+    public boolean skipFrame() {
+        if (wavStream.getDataRemaining() <= 0)
+            return false;
+        try {
+            wavStream.read(new byte[getBufferSize()]);
+        } catch (IOException e) {
+            return false;
+        }
+        renderedSeconds += secondsPerBuffer;
+        return true;
+    }
+
     public int getFrequency() {
-        return inputStream.getSampleRate();
+        return wavStream.getSampleRate();
     }
 
     public int getChannels() {
-        return inputStream.getChannels();
+        return wavStream.getChannels();
     }
 
 
     @Override
     protected int getBufferSize() {
-        return 4096;
+        return 4096 * 10;
     }
 
 
@@ -57,14 +70,14 @@ public class WAVDecoder extends AudioDecoder {
     @Override
     public void reset() {
         super.reset();
-        if (inputStream != null) {
-            StreamUtils.closeQuietly(inputStream);
+        if (wavStream != null) {
+            StreamUtils.closeQuietly(wavStream);
         }
-        inputStream = new WavInputStream(file);
+        wavStream = new WavInputStream(file);
     }
 
     @Override
     public void dispose() {
-        StreamUtils.closeQuietly(inputStream);
+        StreamUtils.closeQuietly(wavStream);
     }
 }

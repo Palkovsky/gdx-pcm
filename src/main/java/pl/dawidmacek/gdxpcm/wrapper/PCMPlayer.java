@@ -5,25 +5,27 @@ import com.badlogic.gdx.audio.AudioDevice;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 
-import net.sourceforge.jaad.aac.AACException;
 import pl.dawidmacek.gdxpcm.decoders.*;
 import pl.dawidmacek.gdxpcm.helpers.SampleFrame;
 
 
 public class PCMPlayer {
 
-    public enum PlayerState {PLAYING, PAUSED, FINISHED, SEEKING, DISPOSED}
+    public enum PlayerState {PLAYING, PAUSED, FINISHED, DISPOSED}
 
     public enum FileType {MP3, FLAC, WAV, OGG, M4A, AAC}
 
     private AudioDecoder decoder;
     private AudioDevice device;
+    private Thread decoderThread;
     private Thread playbackThread;
 
     private PlayerState state;
-    private PlayerState preSeekState;
     private PCMPlayerFrameListener frameListener;
     private PCMPlayerStateChangeListener stateListener;
+
+    private SampleFrame currentFrame;
+    private SampleFrame nextFrame;
 
     private float volume;
     private float seekTarget;
@@ -50,7 +52,7 @@ public class PCMPlayer {
         if (!this.quietMode)
             this.device = Gdx.audio.newAudioDevice(this.decoder.getFrequency(), this.decoder.getChannels() == 1);
 
-        this.playbackThread = new Thread(new Runnable() {
+        this.decoderThread = new Thread(new Runnable() {
             @Override
             public void run() {
 
@@ -63,42 +65,62 @@ public class PCMPlayer {
                             shouldReset = false;
                         }
 
-                        if (state == PlayerState.SEEKING) {
+                        if (seekTarget > 0) {
 
                             decoder.setPosition(seekTarget);
                             seekTarget = 0;
-                            setState(preSeekState);
-                            preSeekState = null;
+                            currentFrame = nextFrame = null;
 
                         } else if (state == PlayerState.PLAYING) {
 
-                            SampleFrame frame = decoder.nextFrame();
+                            if (currentFrame == null) {
+                                SampleFrame frame = (nextFrame != null) ? nextFrame : decoder.nextFrame();
 
-                            if (frame == null) {
-                                setState(PlayerState.FINISHED);
-                            } else {
-                                if (frameListener != null)
-                                    frameListener.onNewFrame(frame);
-                                if (!PCMPlayer.this.quietMode) {
-                                    try {
-                                        device.writeSamples(frame.getData(), 0, frame.getLength());
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                        break;
+                                if (frame == null) {
+                                    setState(PlayerState.FINISHED);
+                                } else {
+                                    if (frameListener != null) {
+                                        frameListener.onNewFrame(frame);
+                                    }
+                                    if (!PCMPlayer.this.quietMode) {//if not quiter, frame will be passed to playback thread
+                                        currentFrame = frame;
                                     }
                                 }
+
+                                if (frame == nextFrame)
+                                    nextFrame = null;
+                            } else if (nextFrame == null) {
+                                nextFrame = decoder.nextFrame();
                             }
+
                         }
                     }
 
                 }
             }
         });
+        this.playbackThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!Thread.currentThread().isInterrupted()) {
+                    try {
+                        if (device != null && currentFrame != null) {
+                            device.writeSamples(currentFrame.getData(), 0, currentFrame.getLength());
+                            currentFrame = null;
+                        }
+                    } catch (Exception e) {
+                    }
+                }
+            }
+        });
+
+        decoderThread.start();
         playbackThread.start();
     }
 
 
     public void dispose() {
+        decoderThread.interrupt();
         playbackThread.interrupt();
         if (device != null)
             device.dispose();
@@ -123,6 +145,10 @@ public class PCMPlayer {
         return decoder.isLooping();
     }
 
+    public boolean isSeeking() {
+        return seekTarget > 0;
+    }
+
     public void setLooping(boolean looping) {
         decoder.setLooping(looping);
     }
@@ -132,15 +158,12 @@ public class PCMPlayer {
     }
 
     public void setProgress(float seconds) {
-        preSeekState = state;
-        setState(PlayerState.SEEKING);
         seekTarget = seconds;
     }
 
     public void reset() {
         shouldReset = true;
         seekTarget = 0;
-        preSeekState = null;
     }
 
     public void pause() {
@@ -153,11 +176,9 @@ public class PCMPlayer {
     }
 
     public void play() {
-        if (state != PlayerState.PLAYING && state != PlayerState.SEEKING) {
+        if (state != PlayerState.PLAYING) {
             setState(PlayerState.PLAYING);
         }
-        if (state == PlayerState.SEEKING)
-            preSeekState = PlayerState.PLAYING;
     }
 
     public float getVolume() {

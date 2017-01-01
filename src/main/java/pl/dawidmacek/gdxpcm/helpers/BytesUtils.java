@@ -2,6 +2,7 @@ package pl.dawidmacek.gdxpcm.helpers;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 
 
 public class BytesUtils {
@@ -21,5 +22,33 @@ public class BytesUtils {
             ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts);
         }
         return shorts;
+    }
+
+    public static short[] concat(short[] first, short[]... rest) {
+        int totalLength = first.length;
+        for (short[] array : rest) {
+            totalLength += array.length;
+        }
+        short[] result = Arrays.copyOf(first, totalLength);
+        int offset = first.length;
+        for (short[] array : rest) {
+            System.arraycopy(array, 0, result, offset, array.length);
+            offset += array.length;
+        }
+        return result;
+    }
+
+    public static byte[] concat(byte[] first, byte[]... rest) {
+        int totalLength = first.length;
+        for (byte[] array : rest) {
+            totalLength += array.length;
+        }
+        byte[] result = Arrays.copyOf(first, totalLength);
+        int offset = first.length;
+        for (byte[] array : rest) {
+            System.arraycopy(array, 0, result, offset, array.length);
+            offset += array.length;
+        }
+        return result;
     }
 }

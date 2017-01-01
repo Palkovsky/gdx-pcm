@@ -5,6 +5,8 @@ import pl.dawidmacek.gdxpcm.helpers.BytesUtils;
 import pl.dawidmacek.gdxpcm.helpers.SampleFrame;
 import pl.dawidmacek.gdxpcm.streams.OggInputStream;
 
+import java.io.IOException;
+
 
 public class OggDecoder extends AudioDecoder {
 
@@ -21,14 +23,23 @@ public class OggDecoder extends AudioDecoder {
         if (input.atEnd())
             return null;
 
-
         byte[] buffer = new byte[getBufferSize()];
         input.read(buffer);
         short[] shortSamples = BytesUtils.bytesToShorts(buffer, !isBigEndian());
+        buffer = null;
 
         renderedSeconds += secondsPerBuffer;
 
-        return new SampleFrame(shortSamples, getBufferSize() / 2, !isBigEndian());
+        return new SampleFrame(shortSamples, shortSamples.length, !isBigEndian());
+    }
+
+    @Override
+    public boolean skipFrame() {
+        if (input.atEnd())
+            return false;
+        input.read(new byte[getBufferSize()]);
+        renderedSeconds += secondsPerBuffer;
+        return true;
     }
 
     @Override
@@ -43,7 +54,7 @@ public class OggDecoder extends AudioDecoder {
 
     @Override
     protected int getBufferSize() {
-        return 4092;
+        return 4096 * 10;
     }
 
     @Override
@@ -62,6 +73,5 @@ public class OggDecoder extends AudioDecoder {
     @Override
     public void dispose() {
         input.close();
-        input = null;
     }
 }

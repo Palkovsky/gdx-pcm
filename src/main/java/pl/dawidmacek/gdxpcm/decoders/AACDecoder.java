@@ -73,6 +73,23 @@ public class AACDecoder extends AudioDecoder {
     }
 
     @Override
+    public boolean skipFrame() {
+
+        try {
+            byte[] nextFrame = adts.readNextFrame();
+            if(nextFrame == null)
+                return false;
+            else {
+                renderedSeconds += secondsPerBuffer;
+                return true;
+            }
+        } catch (IOException e) {
+            return false;
+        }
+
+    }
+
+    @Override
     public int getFrequency() {
         return adts.getSampleFrequency();
     }
@@ -107,8 +124,6 @@ public class AACDecoder extends AudioDecoder {
 
     @Override
     public void dispose() {
-        decoder = null;
-        sampleBuffer = null;
         StreamUtils.closeQuietly(inputStream);
     }
 }

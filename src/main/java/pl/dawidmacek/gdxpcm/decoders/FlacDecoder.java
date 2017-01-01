@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.io.InputStream;
 
 
-
 public class FlacDecoder extends AudioDecoder {
 
     private FLACDecoder decoder;
@@ -47,7 +46,7 @@ public class FlacDecoder extends AudioDecoder {
             e.printStackTrace();
         }
 
-        if(frame == null)
+        if (frame == null)
             return null;
 
         ByteData buff = new ByteData(frame.header.bitsPerSample);
@@ -58,7 +57,24 @@ public class FlacDecoder extends AudioDecoder {
 
         renderedSeconds += secondsPerBuffer;
 
-        return new SampleFrame(shortSamples, decoded.getLen()/2, !isBigEndian());
+        return new SampleFrame(shortSamples, decoded.getLen() / 2, !isBigEndian());
+    }
+
+    @Override
+    public boolean skipFrame() {
+        Frame frame;
+        try {
+            frame = decoder.readNextFrame();
+        } catch (IOException e) {
+            return false;
+        }
+
+        if (frame == null) {
+            return false;
+        } else {
+            renderedSeconds += secondsPerBuffer;
+            return true;
+        }
     }
 
 
@@ -95,7 +111,6 @@ public class FlacDecoder extends AudioDecoder {
 
     @Override
     public void dispose() {
-        decoder = null;
         StreamUtils.closeQuietly(inputStream);
     }
 

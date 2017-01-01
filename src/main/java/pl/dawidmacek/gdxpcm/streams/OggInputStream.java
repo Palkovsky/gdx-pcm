@@ -387,7 +387,7 @@ public class OggInputStream extends InputStream {
                             }
                             if (result == -1) { // missing or corrupt data at this page position
                                 // no reason to complain; already complained above
-                            } else {
+                            }else {
                                 // we have a packet. Decode it
                                 int samples;
                                 if (vorbisBlock.synthesis(packet) == 0) { // test for success!
@@ -446,6 +446,7 @@ public class OggInputStream extends InputStream {
                                     // actually consumed
                                 }
                             }
+
                         }
                         if (page.eos() != 0) {
                             endOfBitStream = true;
@@ -545,7 +546,7 @@ public class OggInputStream extends InputStream {
         StreamUtils.closeQuietly(input);
     }
 
-    public boolean isBigEndian(){
+    public boolean isBigEndian() {
         return bigEndian;
     }
 }

@@ -49,10 +49,6 @@ allprojects {
             (configurations.runtime - configurations.provided).collect {
                 it.isDirectory() ? it : zipTree(it)
             }
-        } {
-            exclude 'META-INF/*.SF'
-            exclude 'META-INF/*.DSA'
-            exclude 'META-INF/*.RSA'
         }
     }
 }

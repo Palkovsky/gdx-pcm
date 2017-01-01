@@ -85,6 +85,23 @@ public class M4ADecoder extends AudioDecoder {
     }
 
     @Override
+    public boolean skipFrame() {
+        if (decoder == null || track == null || sampleBuffer == null)
+            return false;
+
+        try {
+            if(track.readNextFrame() == null)
+                return false;
+            else{
+                renderedSeconds += secondsPerBuffer;
+                return true;
+            }
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    @Override
     public int getFrequency() {
         return decoder.getConfig().getSampleFrequency().getFrequency();
     }
@@ -117,10 +134,6 @@ public class M4ADecoder extends AudioDecoder {
     }
 
     @Override
-    public void dispose() {
-        track = null;
-        decoder = null;
-        sampleBuffer = null;
-    }
+    public void dispose() {}
 }
 
